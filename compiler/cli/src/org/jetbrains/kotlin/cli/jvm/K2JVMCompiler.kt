@@ -44,6 +44,7 @@ import org.jetbrains.kotlin.javac.JavacWrapper
 import org.jetbrains.kotlin.load.java.JvmAbi
 import org.jetbrains.kotlin.load.kotlin.incremental.components.IncrementalCompilationComponents
 import org.jetbrains.kotlin.script.KotlinScriptDefinitionFromAnnotatedTemplate
+import org.jetbrains.kotlin.script.KotlinScriptDefinitionProvider
 import org.jetbrains.kotlin.script.StandardScriptDefinition
 import org.jetbrains.kotlin.util.PerformanceCounter
 import org.jetbrains.kotlin.utils.KotlinPaths
@@ -88,34 +89,16 @@ class K2JVMCompiler : CLICompiler<K2JVMCompilerArguments>() {
             return INTERNAL_ERROR
         }
 
-        if (arguments.script) {
-            if (arguments.freeArgs.isEmpty()) {
-                messageCollector.report(ERROR, "Specify script source path to evaluate")
-                return COMPILATION_ERROR
-            }
-            configuration.addKotlinSourceRoot(arguments.freeArgs[0])
-        }
-        else if (arguments.module == null) {
-            for (arg in arguments.freeArgs) {
-                val file = File(arg)
-                if (file.extension == JavaFileType.DEFAULT_EXTENSION) {
-                    configuration.addJavaSourceRoot(file)
-                }
-                else {
-                    configuration.addKotlinSourceRoot(arg)
-                    if (file.isDirectory) {
-                        configuration.addJavaSourceRoot(file)
-                    }
-                }
-            }
-        }
-
         val classpath = getClasspath(paths, arguments)
         configuration.addJvmClasspathRoots(classpath)
 
         configuration.put(CommonConfigurationKeys.MODULE_NAME, arguments.moduleName ?: JvmAbi.DEFAULT_MODULE_NAME)
 
         if (arguments.module == null && arguments.freeArgs.isEmpty() && !arguments.version) {
+            if (arguments.script) {
+                messageCollector.report(ERROR, "Specify script source path to evaluate")
+                return COMPILATION_ERROR
+            }
             ReplFromTerminal.run(rootDisposable, configuration)
             return ExitCode.OK
         }
@@ -174,16 +157,42 @@ class K2JVMCompiler : CLICompiler<K2JVMCompilerArguments>() {
                 KotlinToJVMBytecodeCompiler.compileModules(environment, directory)
             }
             else if (arguments.script) {
-                val scriptArgs = arguments.freeArgs.subList(1, arguments.freeArgs.size)
+                val sourcePath = arguments.freeArgs.first()
+                configuration.addKotlinSourceRoot(sourcePath)
 
                 configuration.put(JVMConfigurationKeys.RETAIN_OUTPUT_IN_MEMORY, true)
 
                 val environment = createEnvironmentWithScriptingSupport(rootDisposable, configuration, arguments, messageCollector)
                                   ?: return COMPILATION_ERROR
 
+                val scriptDefinitionProvider = KotlinScriptDefinitionProvider.getInstance(environment.project)!!
+                val scriptFile = File(sourcePath)
+                if (scriptFile.isDirectory || !scriptDefinitionProvider.isScript(scriptFile)) {
+                    val extensionHint =
+                            if (configuration.get(JVMConfigurationKeys.SCRIPT_DEFINITIONS) == listOf(StandardScriptDefinition)) " (.kts)"
+                            else ""
+                    messageCollector.report(ERROR, "Specify path to the script file$extensionHint as the first argument")
+                    return COMPILATION_ERROR
+                }
+
+                val scriptArgs = arguments.freeArgs.subList(1, arguments.freeArgs.size)
+
                 return KotlinToJVMBytecodeCompiler.compileAndExecuteScript(environment, paths, scriptArgs)
             }
             else {
+                for (arg in arguments.freeArgs) {
+                    val file = File(arg)
+                    if (file.extension == JavaFileType.DEFAULT_EXTENSION) {
+                        configuration.addJavaSourceRoot(file)
+                    }
+                    else {
+                        configuration.addKotlinSourceRoot(arg)
+                        if (file.isDirectory) {
+                            configuration.addJavaSourceRoot(file)
+                        }
+                    }
+                }
+
                 if (destination != null) {
                     if (destination.endsWith(".jar")) {
                         configuration.put(JVMConfigurationKeys.OUTPUT_JAR, File(destination))
