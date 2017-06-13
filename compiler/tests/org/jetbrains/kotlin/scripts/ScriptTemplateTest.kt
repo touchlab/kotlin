@@ -251,6 +251,16 @@ class ScriptTemplateTest {
         Assert.assertTrue(exceptionThrown)
     }
 
+    @Test
+    fun testScriptWithDifferentExtension() {
+        val aClass = compileScript("different_extension.ktx", ScriptWithDifferentExtension::class, null)
+        Assert.assertNotNull(aClass)
+        val out = captureOut {
+            aClass!!.getConstructor().newInstance()
+        }
+        assertEqualsTrimmed("4", out)
+    }
+
     private fun compileScript(
             scriptPath: String,
             scriptTemplate: KClass<out Any>,
@@ -386,6 +396,12 @@ abstract class ScriptWithoutParams(num: Int)
         scriptFilePattern =".*\\.kts",
         resolver = TestKotlinScriptDependenciesResolver::class)
 abstract class ScriptBaseClassWithOverriddenProperty(override val num: Int) : TestClassWithOverridableProperty(num)
+
+@ScriptTemplateDefinition(
+        scriptFilePattern = ".*\\.ktx",
+        resolver = TestKotlinScriptDependenciesResolver::class
+)
+abstract class ScriptWithDifferentExtension
 
 @ScriptTemplateDefinition(resolver = TestKotlinScriptDependenciesResolver::class)
 abstract class ScriptWithArrayParam(val myArgs: Array<String>)
