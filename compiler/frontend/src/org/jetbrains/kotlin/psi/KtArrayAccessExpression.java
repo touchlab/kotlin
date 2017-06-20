@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2015 JetBrains s.r.o.
+ * Copyright 2010-2017 JetBrains s.r.o.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import org.jetbrains.kotlin.lexer.KtTokens;
 import java.util.Collections;
 import java.util.List;
 
-public class KtArrayAccessExpression extends KtExpressionImpl implements KtReferenceExpression {
+public class KtArrayAccessExpression extends AbstractCollectionLiteralExpression {
     public KtArrayAccessExpression(@NotNull ASTNode node) {
         super(node);
     }
@@ -66,11 +66,13 @@ public class KtArrayAccessExpression extends KtExpressionImpl implements KtRefer
         return Lists.newArrayList(lBracket.getTextRange(), rBracket.getTextRange());
     }
 
+    @Override
     @Nullable
     public PsiElement getLeftBracket() {
         return getIndicesNode().findChildByType(KtTokens.LBRACKET);
     }
 
+    @Override
     @Nullable
     public PsiElement getRightBracket() {
         return getIndicesNode().findChildByType(KtTokens.RBRACKET);

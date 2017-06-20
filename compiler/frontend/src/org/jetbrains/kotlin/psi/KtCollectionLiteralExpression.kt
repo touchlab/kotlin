@@ -17,14 +17,27 @@
 package org.jetbrains.kotlin.psi
 
 import com.intellij.lang.ASTNode
+import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
+import org.jetbrains.kotlin.lexer.KtTokens
 
-class KtCollectionLiteralExpression(node: ASTNode) : KtExpressionImpl(node), KtReferenceExpression {
+class KtCollectionLiteralExpression(node: ASTNode) : AbstractCollectionLiteralExpression(node) {
     override fun <R, D> accept(visitor: KtVisitor<R, D>, data: D): R {
         return visitor.visitCollectionLiteralExpression(this, data)
     }
 
+    override val leftBracket: PsiElement?
+        get() = findChildByType(KtTokens.LBRACKET)
+
+    override val rightBracket: PsiElement?
+        get() = findChildByType(KtTokens.LBRACKET)
+
     fun getInnerExpressions(): List<KtExpression> {
         return PsiTreeUtil.getChildrenOfTypeAsList(this, KtExpression::class.java)
     }
+}
+
+abstract class AbstractCollectionLiteralExpression(node: ASTNode) : KtExpressionImpl(node), KtReferenceExpression {
+    abstract val leftBracket: PsiElement?
+    abstract val rightBracket: PsiElement?
 }
