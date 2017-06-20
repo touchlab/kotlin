@@ -14011,6 +14011,12 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 doTest(fileName);
             }
 
+            @TestMetadata("nullableArgumentToNonNullParameterSimple.kt")
+            public void testNullableArgumentToNonNullParameterSimple() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/nullableTypes/nullableArgumentToNonNullParameterSimple.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("redundantNullable.kt")
             public void testRedundantNullable() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/nullableTypes/redundantNullable.kt");

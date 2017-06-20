@@ -53,6 +53,7 @@ import org.jetbrains.kotlin.types.checker.ErrorTypesAreEqualToAnything
 import org.jetbrains.kotlin.types.checker.KotlinTypeChecker
 import org.jetbrains.kotlin.types.expressions.DoubleColonExpressionResolver
 import org.jetbrains.kotlin.types.typeUtil.containsTypeProjectionsInTopLevelArguments
+import org.jetbrains.kotlin.types.typeUtil.makeNotNullable
 import java.util.*
 
 class CandidateResolver(
@@ -376,7 +377,12 @@ class CandidateResolver(
                     if (!ArgumentTypeResolver.isSubtypeOfForArgumentType(type, expectedType)) {
                         val smartCast = smartCastValueArgumentTypeIfPossible(expression, newContext.expectedType, type, newContext)
                         if (smartCast == null) {
-                            resultStatus = OTHER_ERROR
+                            if (asNonNullArgumentToNonNullParameter(type, expectedType)) {
+                                resultStatus = NULLABLE_ARGUMENT_TYPE_MISMATCH
+                            }
+                            else {
+                                resultStatus = OTHER_ERROR
+                            }
                             matchStatus = ArgumentMatchStatus.TYPE_MISMATCH
                         }
                         else {
@@ -415,6 +421,13 @@ class CandidateResolver(
         return variants.firstOrNull { possibleType ->
             KotlinTypeChecker.DEFAULT.isSubtypeOf(possibleType, expectedType)
         }
+    }
+
+    private fun asNonNullArgumentToNonNullParameter(argumentType: KotlinType, parameterType: KotlinType): Boolean {
+        if (!argumentType.isMarkedNullable || parameterType.isMarkedNullable) return false
+
+        val notNullableArgumentType = argumentType.makeNotNullable()
+        return ArgumentTypeResolver.isSubtypeOfForArgumentType(notNullableArgumentType, parameterType)
     }
 
     private fun CallCandidateResolutionContext<*>.checkReceiverTypeError(): Unit = check {
