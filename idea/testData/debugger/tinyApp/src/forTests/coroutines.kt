@@ -14,3 +14,22 @@ open class EmptyContinuation(override val context: CoroutineContext = EmptyCorou
 fun builder(c: suspend () -> Unit) {
     c.startCoroutine(EmptyContinuation)
 }
+
+class WaitFinish(val sleepTime: Long = 10, val maxAttempts: Int = 500) {
+    private @Volatile var finished = false
+
+    fun finish() {
+        finished = true
+    }
+
+    fun waitEnd() {
+        var attempts = 0
+        while (!finished) {
+            if (attempts > maxAttempts) {
+                throw java.lang.IllegalStateException("Too long wait!")
+            }
+            attempts++
+            Thread.sleep(sleepTime)
+        }
+    }
+}
