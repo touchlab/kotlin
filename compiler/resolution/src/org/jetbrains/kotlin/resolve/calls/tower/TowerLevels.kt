@@ -109,10 +109,8 @@ internal class MemberScopeTowerLevel(
         }
 
         if (dispatchReceiver.possibleTypes.isNotEmpty()) {
-            if (unstableCandidates == null) {
-                result.retainAll(result.selectMostSpecificInEachOverridableGroup { descriptor })
-            }
-            else {
+            result.retainAll(result.selectMostSpecificInEachOverridableGroup { descriptor })
+            if (unstableCandidates != null) {
                 result.addAll(unstableCandidates.selectMostSpecificInEachOverridableGroup { descriptor })
             }
         }
