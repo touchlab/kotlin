@@ -59,7 +59,9 @@ public class KtScript extends KtNamedDeclarationStub<KotlinScriptStub> implement
             return stub.getFqName();
         }
         KtFile containingKtFile = getContainingKtFile();
-        return containingKtFile.getPackageFqName().child(getKotlinScriptDefinition().getScriptName(this));
+        KotlinScriptDefinition scriptDefinition = getKotlinScriptDefinition();
+        if (scriptDefinition == null) return new FqName("<Script definition not found>");
+        return containingKtFile.getPackageFqName().child(scriptDefinition.getScriptName(this));
     }
 
     @Override

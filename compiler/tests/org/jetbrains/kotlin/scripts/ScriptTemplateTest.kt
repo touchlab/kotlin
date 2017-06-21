@@ -31,6 +31,7 @@ import org.jetbrains.kotlin.script.*
 import org.jetbrains.kotlin.test.ConfigurationKind
 import org.jetbrains.kotlin.test.KotlinTestUtils
 import org.jetbrains.kotlin.test.TestJdkKind
+import org.jetbrains.kotlin.util.KotlinFrontEndException
 import org.jetbrains.kotlin.utils.PathUtil
 import org.junit.Assert
 import org.junit.Test
@@ -252,13 +253,23 @@ class ScriptTemplateTest {
     }
 
     @Test
-    fun testScriptWithDifferentExtension() {
-        val aClass = compileScript("different_extension.ktx", ScriptWithDifferentExtension::class, null)
+    fun testScriptWithDifferentFileNamePattern() {
+        val aClass = compileScript("different_name_pattern.custom.kts", ScriptWithDifferentFileNamePattern::class, null)
         Assert.assertNotNull(aClass)
         val out = captureOut {
             aClass!!.getConstructor().newInstance()
         }
         assertEqualsTrimmed("4", out)
+        try {
+            compileScript("fib.kts", ScriptWithDifferentFileNamePattern::class, null)
+            Assert.fail("should throw compilation error")
+        }
+        catch (e: KotlinFrontEndException) {
+            if (!(e.message?.contains("Script definition not found") ?: false)) {
+                // unexpected error
+                throw e
+            }
+        }
     }
 
     private fun compileScript(
@@ -398,10 +409,10 @@ abstract class ScriptWithoutParams(num: Int)
 abstract class ScriptBaseClassWithOverriddenProperty(override val num: Int) : TestClassWithOverridableProperty(num)
 
 @ScriptTemplateDefinition(
-        scriptFilePattern = ".*\\.ktx",
+        scriptFilePattern = ".*\\.custom\\.kts",
         resolver = TestKotlinScriptDependenciesResolver::class
 )
-abstract class ScriptWithDifferentExtension
+abstract class ScriptWithDifferentFileNamePattern
 
 @ScriptTemplateDefinition(resolver = TestKotlinScriptDependenciesResolver::class)
 abstract class ScriptWithArrayParam(val myArgs: Array<String>)
