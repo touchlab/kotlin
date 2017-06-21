@@ -18,13 +18,12 @@ package org.jetbrains.kotlin.types;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns;
-import org.jetbrains.kotlin.descriptors.ClassDescriptor;
-import org.jetbrains.kotlin.descriptors.ClassifierDescriptor;
-import org.jetbrains.kotlin.descriptors.DeclarationDescriptor;
+import org.jetbrains.kotlin.descriptors.*;
 import org.jetbrains.kotlin.name.FqNameUnsafe;
 import org.jetbrains.kotlin.resolve.DescriptorUtils;
 import org.jetbrains.kotlin.resolve.descriptorUtil.DescriptorUtilsKt;
 import org.jetbrains.kotlin.storage.StorageManager;
+import org.jetbrains.kotlin.utils.AllocationTracker;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -63,7 +62,7 @@ public abstract class AbstractClassTypeConstructor extends AbstractTypeConstruct
     }
 
     @Override
-    public boolean equals(Object other) {
+    public final boolean equals(Object other) {
         if (!(other instanceof TypeConstructor)) return false;
 
         // performance optimization: getFqName is slow method
@@ -86,12 +85,26 @@ public abstract class AbstractClassTypeConstructor extends AbstractTypeConstruct
         }
 
         if (myDescriptor instanceof ClassDescriptor && otherDescriptor instanceof ClassDescriptor) {
-            FqNameUnsafe otherFqName = DescriptorUtils.getFqName(otherDescriptor);
-            FqNameUnsafe myFqName = DescriptorUtils.getFqName(myDescriptor);
-            return myFqName.equals(otherFqName);
+            return areFqNamesEqual(myDescriptor, otherDescriptor);
         }
 
         return false;
+    }
+
+    private static boolean areFqNamesEqual(DeclarationDescriptor a, DeclarationDescriptor b) {
+        while (a != null && b != null) {
+            if (a instanceof ModuleDescriptor || b instanceof ModuleDescriptor) break;
+
+            if (a instanceof PackageFragmentDescriptor && b instanceof PackageFragmentDescriptor) {
+                return ((PackageFragmentDescriptor) a).getFqName().equals(((PackageFragmentDescriptor) b).getFqName());
+            }
+
+            if (!a.getName().equals(b.getName())) return false;
+
+            a = a.getContainingDeclaration();
+            b = b.getContainingDeclaration();
+        }
+        return true;
     }
 
     private static boolean hasMeaningfulFqName(@NotNull ClassifierDescriptor descriptor) {
